@@ -1,20 +1,24 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\OrderController;
+// 1. Đã sửa lại đường dẫn import (thêm \Api\)
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\OrderController;
 
-// Nhóm 1: Auth Routes (Không cần Token) - Tổng: 2 routes
+// Nhóm 1: Auth Routes (Không cần Token)
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
 });
 
-// Nhóm 2: Các Routes bắt buộc phải có Token mới được dùng - Tổng: 9 routes
+// Nhóm 2: Các Routes bắt buộc phải có Token mới được dùng
 Route::middleware('jwt.auth')->group(function () {
     // Tài khoản
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // 2. Đã bổ sung route refresh token theo yêu cầu
+    Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
     // Đơn hàng
     Route::post('orders', [OrderController::class, 'store']);
