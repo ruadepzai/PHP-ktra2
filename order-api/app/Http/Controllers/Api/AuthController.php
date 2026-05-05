@@ -19,21 +19,16 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 class AuthController extends Controller
 {
     /**
-     * DANG KY tai khoan moi
      * POST /api/auth/register
-     * Thanh cong: 201 Created + token
-     * That bai:  422 Validation Error
      */
     public function register(Request $request)
     {
-        // Buoc 1: Validate du lieu dau vao
+        // Validate du lieu dau vao
         $validator = Validator::make($request->all(), [
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
-            // 'confirmed' -> yeu cau field 'password_confirmation' phai khop
         ], [
-            // Custom messages tieng Viet
             'name.required'      => 'Ten la bat buoc',
             'email.required'     => 'Email la bat buoc',
             'email.email'        => 'Email khong dung dinh dang',
@@ -48,19 +43,17 @@ class AuthController extends Controller
             return ApiResponse::validation($validator->errors());
         }
 
-        // Buoc 2: Tao user moi trong database
+        //Tao user moi trong database
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            // Hash::make() ma hoa mat khau bang bcrypt
-            // KHONG BAO GIO luu mat khau dang plaintext!
         ]);
 
-        // Buoc 3: Tao JWT token tu user vua tao
+        //Tao JWT token tu user vua tao
         $token = JWTAuth::fromUser($user);
 
-        // Buoc 4: Tra ve 201 Created + thong tin user + token
+        //Tra ve 201 Created + thong tin user + token
         return ApiResponse::success([
             'user'       => $user,
             'token'      => $token,
@@ -70,12 +63,7 @@ class AuthController extends Controller
     }
 
     /**
-     * DANG NHAP
      * POST /api/auth/login
-     * 
-     * 
-     * Thanh cong: 200 OK + token
-     * That bai:  401 Unauthorized (sai email/password)
      */
     public function login(Request $request)
     {
@@ -93,23 +81,17 @@ class AuthController extends Controller
             return ApiResponse::validation($validator->errors());
         }
 
-        // Buoc 2: Lay credentials (chi lay email va password)
+        //Lay credentials (chi lay email va password)
         $credentials = $request->only('email', 'password');
 
         try {
-            // Buoc 3: Thu dang nhap voi JWTAuth::attempt()
-            // attempt() kiem tra email + password trong DB
-            // Neu dung -> tra ve token
-            // Neu sai -> tra ve false
+            //Thu dang nhap voi JWTAuth::attempt()
             if (!$token = JWTAuth::attempt($credentials)) {
                 return ApiResponse::error('Email hoac mat khau khong dung', 401);
             }
         } catch (JWTException $e) {
-            // Loi he thong (VD: khong doc duoc JWT_SECRET)
             return ApiResponse::error('Khong the tao token', 500);
         }
-
-        // Buoc 4: Dang nhap thanh cong -> tra ve token
         return ApiResponse::success([
             'token'      => $token,
             'token_type' => 'bearer',
@@ -118,12 +100,7 @@ class AuthController extends Controller
     }
 
     /**
-     * DANG XUAT (huy token hien tai)
      * POST /api/auth/logout
-     * 
-     * Header: Authorization: Bearer {token}
-     * 
-     * Token se bi dua vao blacklist -> khong the su dung lai
      */
     public function logout()
     {
@@ -138,12 +115,7 @@ class AuthController extends Controller
     }
 
     /**
-     * LAY THONG TIN user dang dang nhap
      * GET /api/auth/me
-     * 
-     * Header: Authorization: Bearer {token}
-     * 
-     * Tra ve: thong tin user (name, email, created_at...)
      */
     public function me()
     {
@@ -155,12 +127,7 @@ class AuthController extends Controller
     }
 
     /**
-     * LAM MOI TOKEN (gia han thoi gian su dung)
      * POST /api/auth/refresh
-     * 
-     * Header: Authorization: Bearer {token_cu}
-     * 
-     * Token cu se bi huy, tra ve token moi voi thoi gian moi
      */
     public function refresh()
     {
