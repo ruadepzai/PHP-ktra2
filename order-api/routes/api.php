@@ -26,6 +26,6 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('orders/my', [OrderController::class, 'myOrders']);
     Route::get('orders/{id}', [OrderController::class, 'show']);
     Route::put('orders/{id}', [OrderController::class, 'update']);
-    Route::patch('orders/{id}/confirm', [OrderController::class, 'confirm']);
-    Route::patch('orders/{id}/cancel', [OrderController::class, 'cancel']);
+    Route::patch('orders/{id}/confirm', [OrderController::class, 'confirmOrder']);
+    Route::patch('orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
 });
