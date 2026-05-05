@@ -11,38 +11,14 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
-/**
- * TV5 — Handler (Error Handler tap trung)
- * 
- * Xu ly TAT CA loi trong ung dung va tra ve JSON format thong nhat
- * 
- * Tai sao can Error Handler tap trung?
- *   - Khong co: Moi controller tu format loi khac nhau -> KHONG NHAT QUAN
- *   - Co:       Moi loi deu tra ve cung 1 format JSON -> CHUYEN NGHIEP
- * 
- * Format loi thong nhat:
- *   {
- *       "success": false,
- *       "message": "Mo ta loi",
- *       "error_code": 404
- *   }
- * 
- * Duoc goi tu bootstrap/app.php -> withExceptions()
- */
 class Handler
 {
     /**
      * Render exception thanh JSON response
-     * Chi xu ly cac request API (url bat dau bang /api/)
-     *
-     * @param  Throwable  $e        — Exception duoc nem ra
-     * @param  mixed      $request  — HTTP Request
-     * @return JsonResponse|null    — Tra ve JSON hoac null (de Laravel xu ly mac dinh)
      */
     public static function render(Throwable $e, $request): ?JsonResponse
     {
         // Chi xu ly API requests
-        // Request web (Blade) de Laravel xu ly mac dinh (hien trang loi HTML)
         if (!$request->expectsJson() && !$request->is('api/*')) {
             return null;
         }
@@ -51,10 +27,7 @@ class Handler
     }
 
     /**
-     * Chuyen doi exception thanh JSON response voi HTTP status code phu hop
-     *
-     * @param  Throwable  $e
-     * @return JsonResponse
+     * Chuyen doi exception thanh JSON response 
      */
     private static function renderApiException(Throwable $e): JsonResponse
     {
@@ -104,8 +77,6 @@ class Handler
 
         // --- 500 Internal Server Error ---
         // Moi loi khac (bug, DB mat ket noi, loi khong luong truoc)
-        // Trong production: KHONG hien thi chi tiet loi (bao mat)
-        // Trong development: hien thi message de debug
         $message = config('app.debug')
             ? $e->getMessage()          // Development: hien chi tiet
             : 'Loi he thong noi bo';    // Production: an chi tiet
@@ -115,10 +86,6 @@ class Handler
 
     /**
      * Helper: Tao JSON error response voi format thong nhat
-     *
-     * @param  string  $message  — Mo ta loi
-     * @param  int     $code     — HTTP status code
-     * @return JsonResponse
      */
     private static function jsonError(string $message, int $code): JsonResponse
     {
