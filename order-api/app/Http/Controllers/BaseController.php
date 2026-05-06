@@ -81,7 +81,7 @@ abstract class BaseController extends Controller
      *
      * @param  Request  $request  Chứa query params: ?status=pending&page=2
      */
-    abstract public function index(Request $request);
+    abstract public function index($request);
 
     /**
      * 🔍 Xem chi tiết 1 tài nguyên (VD: chi tiết đơn hàng #5).
@@ -93,7 +93,7 @@ abstract class BaseController extends Controller
      *
      * @param  string  $id  ID của resource — VD: "5" (lấy từ URL /api/orders/5)
      */
-    abstract public function show(string $id);
+    abstract public function show($id);
 
     /**
      * ➕ Tạo mới tài nguyên (VD: tạo đơn hàng mới).
@@ -104,9 +104,9 @@ abstract class BaseController extends Controller
      * - Gán user_id = người đang đăng nhập
      * - Trả về 201 Created
      *
-     * @param  Request  $request  Chứa body: { "total_amount": 50000, "address": "..." }
+     * @param  Request  $request  Chứa body dữ liệu đơn hàng
      */
-    abstract public function store(Request $request);
+    abstract public function store($request);
 
     /**
      * ✏️ Cập nhật tài nguyên (VD: sửa địa chỉ đơn hàng).
@@ -119,7 +119,7 @@ abstract class BaseController extends Controller
      * @param  Request  $request  Dữ liệu cần cập nhật
      * @param  string  $id       ID đơn hàng cần sửa
      */
-    abstract public function update(Request $request, string $id);
+    abstract public function update($request, $id);
 
     /**
      * 🗑️ Xóa tài nguyên (VD: xóa đơn hàng).
@@ -131,7 +131,7 @@ abstract class BaseController extends Controller
      *
      * @param  string  $id  ID đơn hàng cần xóa
      */
-    abstract public function destroy(string $id);
+    abstract public function destroy($id);
 
     /**
      * 🏷️ Trả về tên Model class mà controller quản lý.

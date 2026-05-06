@@ -8,6 +8,7 @@ use App\Http\Resources\OrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class OrderController extends BaseController
 {
@@ -17,7 +18,7 @@ class OrderController extends BaseController
     }
 
     // Danh sach don hang
-    public function index(Request $request)
+    public function index($request)
     {
         $query = Order::query();
         if ($request->has('status'))
@@ -34,18 +35,13 @@ class OrderController extends BaseController
         return ApiResponse::success(new OrderResource($order));
     }
 
-    // Tao don hang moi
-    public function store(Request $request)
+    // Tao don hang moi — dung StoreOrderRequest rules nhung qua Validator
+    public function store($request)
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'item_name'        => 'required|string|max:255',
-            'quantity'         => 'required|integer|min:1',
-            'total_price'      => 'required|numeric|min:1000',
-            'shipping_address' => 'required|string|min:10',
-            'payment_method'   => 'required|in:COD,Bank Transfer,Momo,ZaloPay,VNPay',
-            'note'             => 'nullable|string|max:1000',
-        ]);
+        $storeRequest = new StoreOrderRequest();
+        $validator = Validator::make($request->all(), $storeRequest->rules(), $storeRequest->messages());
         if ($validator->fails()) return ApiResponse::validation($validator->errors());
+
         $order = Order::create(array_merge(
             $validator->validated(),
             ['user_id' => auth()->id(), 'status' => 'pending']
@@ -54,7 +50,7 @@ class OrderController extends BaseController
     }
 
     // Cap nhat don hang (chi khi pending)
-    public function update(Request $request, string $id)
+    public function update($request, $id)
     {
         $order = Order::findOrFail($id);
         if ($order->user_id !== auth()->id())
@@ -62,12 +58,8 @@ class OrderController extends BaseController
         if ($order->status !== 'pending')
             return ApiResponse::error('Chi cap nhat duoc khi status = pending', 422);
         $order->update($request->only([
-            'item_name',
-            'quantity',
-            'total_price',
-            'shipping_address',
-            'payment_method',
-            'note'
+            'item_name', 'quantity', 'total_price',
+            'shipping_address', 'payment_method', 'note'
         ]));
         return ApiResponse::success(new OrderResource($order->fresh()));
     }
@@ -84,7 +76,7 @@ class OrderController extends BaseController
         return ApiResponse::success(null, 'Xoa don hang thanh cong');
     }
 
-    // 4.7 Don hang cua toi
+    // Don hang cua toi
     public function myOrders(Request $request)
     {
         $q = Order::where('user_id', auth()->id());
