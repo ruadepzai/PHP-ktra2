@@ -40,8 +40,7 @@ class OrderController extends BaseController
         if ($order->user_id !== auth()->id()) return ApiResponse::forbidden('Khong co quyen');
         if ($order->status !== 'pending')
             return ApiResponse::error('Chi cap nhat duoc khi status = pending', 422);
-        $order->update($request->only(['item_name','quantity','total_price',
-            'shipping_address','payment_method','note']));
+        $order->update($request->only(['address', 'notes']));
         return ApiResponse::success(new OrderResource($order->fresh()));
     }
 
