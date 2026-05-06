@@ -11,44 +11,73 @@ use Illuminate\Http\Request;
 
 class OrderController extends BaseController
 {
-    protected function getModel(): string { return Order::class; }
+    protected function getModel(): string
+    {
+        return Order::class;
+    }
 
     // Danh sach don hang
-    public function index(Request $request) {
+    public function index(Request $request)
+    {
         $query = Order::query();
-        if ($request->has('status')) $query->where('status', $request->status);
+        if ($request->has('status'))
+            $query->where('status', $request->status);
         return ApiResponse::success(OrderResource::collection($query->latest()->paginate(10)));
     }
 
     // Chi tiet don hang
-    public function show($id) {
+    public function show($id)
+    {
         $order = Order::findOrFail($id);
-        if ($order->user_id !== auth()->id()) return ApiResponse::forbidden('Khong co quyen');
+        if ($order->user_id !== auth()->id())
+            return ApiResponse::forbidden('Khong co quyen');
         return ApiResponse::success(new OrderResource($order));
     }
 
     // Tao don hang moi
-    public function store(StoreOrderRequest $request) {
-        $order = Order::create(array_merge($request->validated(),
-            ['user_id' => auth()->id(), 'status' => 'pending']));
+    public function store(Request $request)
+    {
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'item_name'        => 'required|string|max:255',
+            'quantity'         => 'required|integer|min:1',
+            'total_price'      => 'required|numeric|min:1000',
+            'shipping_address' => 'required|string|min:10',
+            'payment_method'   => 'required|in:COD,Bank Transfer,Momo,ZaloPay,VNPay',
+            'note'             => 'nullable|string|max:1000',
+        ]);
+        if ($validator->fails()) return ApiResponse::validation($validator->errors());
+        $order = Order::create(array_merge(
+            $validator->validated(),
+            ['user_id' => auth()->id(), 'status' => 'pending']
+        ));
         return ApiResponse::created(new OrderResource($order), 'Tao don hang thanh cong');
     }
 
     // Cap nhat don hang (chi khi pending)
-    public function update(UpdateOrderRequest $request, $id) {
+    public function update(Request $request, string $id)
+    {
         $order = Order::findOrFail($id);
-        if ($order->user_id !== auth()->id()) return ApiResponse::forbidden('Khong co quyen');
+        if ($order->user_id !== auth()->id())
+            return ApiResponse::forbidden('Khong co quyen');
         if ($order->status !== 'pending')
             return ApiResponse::error('Chi cap nhat duoc khi status = pending', 422);
-        $order->update($request->only(['item_name','quantity','total_price',
-            'shipping_address','payment_method','note']));
+        $order->update($request->only([
+            'item_name',
+            'quantity',
+            'total_price',
+            'shipping_address',
+            'payment_method',
+            'note'
+        ]));
         return ApiResponse::success(new OrderResource($order->fresh()));
     }
 
     // Xoa don hang (chi khi pending)
-    public function destroy($id) {
+    public function destroy($id)
+    {
         $order = Order::findOrFail($id);
-        if ($order->user_id !== auth()->id()) return ApiResponse::forbidden('Khong co quyen');
+        if ($order->user_id !== auth()->id())
+            return ApiResponse::forbidden('Khong co quyen');
         if ($order->status !== 'pending')
             return ApiResponse::error('Chi xoa duoc khi status = pending', 422);
         $order->delete();
@@ -56,16 +85,20 @@ class OrderController extends BaseController
     }
 
     // 4.7 Don hang cua toi
-    public function myOrders(Request $request) {
+    public function myOrders(Request $request)
+    {
         $q = Order::where('user_id', auth()->id());
-        if ($request->has('status')) $q->where('status', $request->status);
+        if ($request->has('status'))
+            $q->where('status', $request->status);
         return ApiResponse::success(OrderResource::collection($q->latest()->paginate(10)));
     }
 
     // Xac nhan don hang
-    public function confirmOrder($id) {
+    public function confirmOrder($id)
+    {
         $order = Order::findOrFail($id);
-        if ($order->user_id !== auth()->id()) return ApiResponse::forbidden('Khong co quyen');
+        if ($order->user_id !== auth()->id())
+            return ApiResponse::forbidden('Khong co quyen');
         if ($order->status !== 'pending')
             return ApiResponse::error('Chi xac nhan duoc khi status = pending', 422);
         $order->update(['status' => 'confirmed']);
@@ -73,10 +106,12 @@ class OrderController extends BaseController
     }
 
     // Huy don hang
-    public function cancelOrder($id) {
+    public function cancelOrder($id)
+    {
         $order = Order::findOrFail($id);
-        if ($order->user_id !== auth()->id()) return ApiResponse::forbidden('Khong co quyen');
-        if (!in_array($order->status, ['pending','confirmed']))
+        if ($order->user_id !== auth()->id())
+            return ApiResponse::forbidden('Khong co quyen');
+        if (!in_array($order->status, ['pending', 'confirmed']))
             return ApiResponse::error('Khong the huy o trang thai: ' . $order->status, 422);
         $order->update(['status' => 'cancelled']);
         return ApiResponse::success(new OrderResource($order->fresh()), 'Da huy');
