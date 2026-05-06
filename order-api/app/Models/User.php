@@ -15,6 +15,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
+        'role',
     ];
 
     protected $hidden = [
@@ -52,5 +53,13 @@ class User extends Authenticatable implements JWTSubject
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Kiểm tra user có phải admin không
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

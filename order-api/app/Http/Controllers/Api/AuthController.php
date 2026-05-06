@@ -55,10 +55,15 @@ class AuthController extends Controller
 
         //Tra ve 201 Created + thong tin user + token
         return ApiResponse::success([
-            'user'       => $user,
+            'user'       => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role,
+            ],
             'token'      => $token,
             'token_type' => 'bearer',
-            'expires_in' => config('jwt.ttl') * 60, // TTL tinh bang giay
+            'expires_in' => config('jwt.ttl') * 60,
         ], 'Dang ky thanh cong', 201);
     }
 
@@ -92,7 +97,15 @@ class AuthController extends Controller
         } catch (JWTException $e) {
             return ApiResponse::error('Khong the tao token', 500);
         }
+        // Lay user vua dang nhap de tra role cho FE
+        $user = auth()->user();
         return ApiResponse::success([
+            'user'       => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role,
+            ],
             'token'      => $token,
             'token_type' => 'bearer',
             'expires_in' => config('jwt.ttl') * 60,
@@ -144,5 +157,19 @@ class AuthController extends Controller
         } catch (JWTException $e) {
             return ApiResponse::error('Khong the lam moi token', 401);
         }
+    }
+
+    /**
+     * GET /api/admin/users (Admin only)
+     * Danh sach tat ca user trong he thong
+     */
+    public function listUsers()
+    {
+        $users = User::select('id', 'name', 'email', 'role', 'created_at')
+            ->withCount('orders')
+            ->latest()
+            ->paginate(20);
+
+        return ApiResponse::success($users, 'Danh sach nguoi dung');
     }
 }
