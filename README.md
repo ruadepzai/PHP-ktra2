@@ -2,59 +2,60 @@
 order-api/
 ├── app/
 │   ├── Contracts/
-│   │   └── MiddlewareInterface.php          # TV2 — Interface contract
+│   │   └── MiddlewareInterface.php              # TV2 — Interface contract
 │   ├── Exceptions/
-│   │   └── Handler.php                      # TV5 — Error handling tập trung
+│   │   └── Handler.php                          # TV5 — Error handling tập trung
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── Controller.php               # Laravel có sẵn
-│   │   │   ├── BaseController.php           # TV2 — Abstract Class
+│   │   │   ├── Controller.php                   # Laravel mặc định
+│   │   │   ├── BaseController.php               # TV2 — Abstract Class
+│   │   │   ├── OrderWebController.php           # TV4 — Controller cho Blade views
 │   │   │   └── Api/
-│   │   │       ├── AuthController.php       # TV5 — JWT login/register/logout
-│   │   │       └── OrderController.php      # TV4 — CRUD + confirm/cancel
+│   │   │       ├── AuthController.php           # TV5 — JWT login/register/logout + listUsers
+│   │   │       └── OrderController.php          # TV4 — CRUD + confirm/cancel/ship/deliver + stats
 │   │   ├── Middleware/
-│   │   │   ├── JwtAuthMiddleware.php        # TV5 — Authentication (401)
-│   │   │   ├── OrderOwnerMiddleware.php     # TV5 — Authorization (403)
-│   │   │   └── CorsMiddleware.php           # TV5 — CORS headers
+│   │   │   ├── JwtAuthMiddleware.php            # TV5 — Authentication (401)
+│   │   │   ├── OrderOwnerMiddleware.php         # TV5 — Authorization (403)
+│   │   │   ├── CorsMiddleware.php               # TV5 — CORS headers
+│   │   │   └── AdminMiddleware.php              # TV5 — Phân quyền Admin (403)
 │   │   ├── Requests/
-│   │   │   ├── StoreOrderRequest.php        # TV2 — Form Request Validation
-│   │   │   └── UpdateOrderRequest.php       # TV2 — Form Request Validation
+│   │   │   ├── StoreOrderRequest.php            # TV2 — Form Request Validation
+│   │   │   └── UpdateOrderRequest.php           # TV2 — Form Request Validation
 │   │   ├── Resources/
-│   │   │   └── OrderResource.php            # TV2 — API Resource (View layer)
+│   │   │   └── OrderResource.php                # TV2 — API Resource (View layer)
 │   │   └── Responses/
-│   │       └── ApiResponse.php              # TV2 — Static Factory Pattern
+│   │       └── ApiResponse.php                  # TV2 — Static Factory Pattern
 │   └── Models/
-│       ├── User.php                         # TV1 — implements JWTSubject
-│       └── Order.php                        # TV1 — Eloquent + scopes + logic
+│       ├── User.php                             # TV1 — JWTSubject + isAdmin()
+│       └── Order.php                            # TV1 — Eloquent + scopes + logic
 ├── bootstrap/
-│   └── app.php                              # TV3 — đăng ký middleware aliases
+│   └── app.php                                  # TV3+TV5 — Middleware aliases + exception handler
 ├── config/
-│   ├── cors.php                             # TV3 — cấu hình CORS
-│   └── jwt.php                              # TV3 — cấu hình JWT
+│   ├── cors.php                                 # TV3 — Cấu hình CORS
+│   └── jwt.php                                  # TV3 — Cấu hình JWT
 ├── database/
 │   ├── migrations/
-│   │   ├── 0001_01_01_000000_create_users_table.php   # Laravel có sẵn
-│   │   └── xxxx_xx_xx_create_orders_table.php          # TV1 — Migration
+│   │   ├── 0001_01_01_000000_create_users_table.php       # Laravel mặc định
+│   │   ├── 2026_05_03_000000_create_orders_table.php      # TV1 — Bảng orders
+│   │   └── 2026_05_06_000001_add_role_to_users_table.php  # TV5 — Thêm cột role
 │   └── seeders/
-│       ├── DatabaseSeeder.php               # Laravel có sẵn
-│       └── OrderSeeder.php                  # TV1 — Dữ liệu mẫu
-├── resources/
-│   └── views/
-│       ├── layouts/
-│       │   └── app.blade.php               # TV3 — Layout chính (@yield)
-│       ├── orders/
-│       │   ├── index.blade.php             # TV4 — Danh sách (@foreach)
-│       │   ├── show.blade.php              # TV4 — Chi tiết (@if/@elseif)
-│       │   └── _order-card.blade.php       # TV1 — Partial (@include)
-│       └── components/
-│           └── status-badge.blade.php      # TV2 — Component (@props)
+│       ├── DatabaseSeeder.php                   # Laravel mặc định
+│       └── OrderSeeder.php                      # TV1 — Dữ liệu mẫu
+├── resources/views/
+│   ├── layouts/
+│   │   └── app.blade.php                        # TV3 — Layout chính
+│   ├── orders/
+│   │   ├── index.blade.php                      # TV4 — Danh sách đơn hàng
+│   │   └── show.blade.php                       # TV4 — Chi tiết đơn hàng
+│   └── components/
+│       └── status-badge.blade.php               # TV2 — Component badge trạng thái
 ├── routes/
-│   ├── api.php                             # TV3 — API routes (JWT protected)
-│   └── web.php                             # TV3 — Web routes (Blade views)
+│   ├── api.php                                  # TV3 — API routes (public + JWT + admin)
+│   └── web.php                                  # TV3 — Web routes (Blade views)
 ├── public/
-│   └── index.php                           # Laravel có sẵn — Front Controller
-├── .env                                    # TV3 — DB + JWT_SECRET config
-├── .env.example                            # Laravel có sẵn
-├── composer.json                           # Laravel có sẵn + tymon/jwt-auth
-└── README.md                               # Cả team
+│   └── index.php                                # Laravel — Front Controller
+├── .env                                         # Cấu hình DB + JWT_SECRET
+├── composer.json                                # Dependencies
+├── artisan                                      # Laravel CLI
+└── README.md
 ```
