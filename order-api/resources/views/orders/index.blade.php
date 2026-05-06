@@ -6,12 +6,10 @@
 @section('content')
 <div class="container mt-4">
 
-    {{-- Tieu de trang --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Danh sach don hang</h2>
     </div>
 
-    {{-- Form filter theo status --}}
     <form method="GET" action="{{ route('orders.index') }}" class="mb-3">
         <div class="row g-2">
             <div class="col-md-3">
@@ -31,15 +29,16 @@
         </div>
     </form>
 
-    {{-- Bang danh sach don hang --}}
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-dark">
                 <tr>
                     <th>STT</th>
-                    <th>Ma don hang</th>
+                    <th>Ma don</th>
+                    <th>Ten hang</th>
+                    <th>SL</th>
                     <th>Tong tien</th>
-                    <th>Dia chi</th>
+                    <th>PT Thanh toan</th>
                     <th>Trang thai</th>
                     <th>Ngay tao</th>
                     <th>Hanh dong</th>
@@ -50,8 +49,10 @@
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ $order->order_number }}</td>
-                    <td>{{ number_format($order->total_amount, 0, ',', '.') }} VND</td>
-                    <td>{{ $order->address }}</td>
+                    <td>{{ $order->item_name }}</td>
+                    <td>{{ $order->quantity }}</td>
+                    <td>{{ number_format($order->total_price, 0, ',', '.') }} VND</td>
+                    <td>{{ $order->payment_method }}</td>
                     <td>
                         <x-status-badge :status="$order->status" />
                     </td>
@@ -66,16 +67,14 @@
                               onsubmit="return confirm('Xac nhan xoa don hang nay?')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                Xoa
-                            </button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Xoa</button>
                         </form>
                         @endif
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
+                    <td colspan="9" class="text-center text-muted py-4">
                         Khong co don hang nao.
                     </td>
                 </tr>

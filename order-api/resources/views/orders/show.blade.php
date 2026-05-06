@@ -6,7 +6,6 @@
 @section('content')
 <div class="container mt-4" style="max-width: 760px;">
 
-    {{-- Tieu de + nut quay lai --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Chi tiet don hang #{{ $order->id }}</h2>
         <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">
@@ -14,7 +13,6 @@
         </a>
     </div>
 
-    {{-- The thong tin chinh --}}
     <div class="card shadow-sm mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <strong>Thong tin don hang</strong>
@@ -26,20 +24,32 @@
                 <div class="col-sm-8">{{ $order->order_number }}</div>
             </div>
             <div class="row mb-3">
+                <div class="col-sm-4 fw-bold text-muted">Ten hang:</div>
+                <div class="col-sm-8">{{ $order->item_name }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-sm-4 fw-bold text-muted">So luong:</div>
+                <div class="col-sm-8">{{ $order->quantity }}</div>
+            </div>
+            <div class="row mb-3">
                 <div class="col-sm-4 fw-bold text-muted">Tong tien:</div>
                 <div class="col-sm-8 fw-bold text-success">
-                    {{ number_format($order->total_amount, 0, ',', '.') }} VND
+                    {{ number_format($order->total_price, 0, ',', '.') }} VND
                 </div>
             </div>
             <div class="row mb-3">
                 <div class="col-sm-4 fw-bold text-muted">Dia chi giao hang:</div>
-                <div class="col-sm-8">{{ $order->address }}</div>
+                <div class="col-sm-8">{{ $order->shipping_address }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-sm-4 fw-bold text-muted">Phuong thuc thanh toan:</div>
+                <div class="col-sm-8">{{ $order->payment_method }}</div>
             </div>
 
-            @if($order->notes)
+            @if($order->note)
             <div class="row mb-3">
                 <div class="col-sm-4 fw-bold text-muted">Ghi chu:</div>
-                <div class="col-sm-8 fst-italic">{{ $order->notes }}</div>
+                <div class="col-sm-8 fst-italic">{{ $order->note }}</div>
             </div>
             @endif
 
@@ -54,24 +64,17 @@
         </div>
     </div>
 
-    {{-- Khu vuc hanh dong --}}
     <div class="d-flex gap-2 flex-wrap">
-
         @if($order->status === 'pending')
-        <a href="{{ route('orders.edit', $order->id) }}"
-           class="btn btn-warning">
+        <a href="{{ route('orders.edit', $order->id) }}" class="btn btn-warning">
             Chinh sua don hang
         </a>
-        @endif
 
-        @if($order->status === 'pending')
         <form action="{{ route('orders.confirm', $order->id) }}" method="POST"
               onsubmit="return confirm('Xac nhan don hang nay?')">
             @csrf
             @method('PATCH')
-            <button type="submit" class="btn btn-success">
-                Xac nhan don hang
-            </button>
+            <button type="submit" class="btn btn-success">Xac nhan don hang</button>
         </form>
         @endif
 
@@ -80,24 +83,18 @@
               onsubmit="return confirm('Ban co chac chan muon huy don hang nay?')">
             @csrf
             @method('PATCH')
-            <button type="submit" class="btn btn-danger">
-                Huy don hang
-            </button>
+            <button type="submit" class="btn btn-danger">Huy don hang</button>
         </form>
         @endif
 
         @if($order->status === 'pending')
         <form action="{{ route('orders.destroy', $order->id) }}" method="POST"
-              onsubmit="return confirm('Xoa vinh vien don hang nay?')"
-              class="ms-auto">
+              onsubmit="return confirm('Xoa vinh vien don hang nay?')" class="ms-auto">
             @csrf
             @method('DELETE')
-            <button type="submit" class="btn btn-outline-danger">
-                Xoa don hang
-            </button>
+            <button type="submit" class="btn btn-outline-danger">Xoa don hang</button>
         </form>
         @endif
-
     </div>
 
 </div>

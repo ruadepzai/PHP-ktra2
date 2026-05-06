@@ -19,14 +19,18 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'order_number',
-        'total_amount',
+        'item_name',
+        'quantity',
+        'total_price',
         'status',
-        'address',
-        'notes'
+        'shipping_address',
+        'payment_method',
+        'note'
     ];
 
     protected $casts = [
-        'total_amount' => 'decimal:2',
+        'total_price' => 'decimal:2',
+        'quantity'    => 'integer',
     ];
 
     /**
