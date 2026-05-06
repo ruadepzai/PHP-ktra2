@@ -1,157 +1,220 @@
 <?php
+// ============================================================================
+// FILE: app/Http/Controllers/BaseController.php
+// TV2 — Abstract Class + Template Method Pattern
+// ============================================================================
+//
+// 📖 ABSTRACT CLASS LÀ GÌ?
+// --------------------------
+// Abstract class là class CHA mà:
+// 1. KHÔNG THỂ tạo object trực tiếp: new BaseController() → ❌ LỖI
+// 2. Chứa 2 loại method:
+//    a) abstract method → CHỈ khai báo tên, KHÔNG có code → class con BẮT BUỘC viết code
+//    b) concrete method → CÓ code hoàn chỉnh → class con ĐƯỢC dùng ngay (kế thừa)
+//
+// 📖 CÁCH HOẠT ĐỘNG TRONG DỰ ÁN:
+//
+//   BaseController (abstract - class CHA)
+//   ├── abstract index()       ← Khai báo thôi, KHÔNG có code
+//   ├── abstract show()        ← OrderController BẮT BUỘC phải viết code cho 5 method này
+//   ├── abstract store()
+//   ├── abstract update()
+//   ├── abstract destroy()
+//   ├── getCurrentUser()       ← CÓ code → OrderController dùng được ngay: $this->getCurrentUser()
+//   ├── authorizeOrderOwner()  ← CÓ code → OrderController dùng được ngay
+//   ├── successResponse()      ← CÓ code → OrderController dùng được ngay
+//   └── errorResponse()        ← CÓ code → OrderController dùng được ngay
+//        │
+//        ▼
+//   OrderController extends BaseController (class CON)
+//   ├── index()        ← BẮT BUỘC viết code (vì abstract)
+//   ├── show()         ← BẮT BUỘC viết code
+//   ├── store()        ← BẮT BUỘC viết code
+//   ├── update()       ← BẮT BUỘC viết code
+//   ├── destroy()      ← BẮT BUỘC viết code
+//   ├── myOrders()     ← Method riêng của OrderController
+//   ├── confirmOrder() ← Method riêng
+//   └── cancelOrder()  ← Method riêng
+//
+// 🎯 TẠI SAO CẦN ABSTRACT CLASS?
+// Nếu sau này thêm CartController, ReviewController... chỉ cần:
+//   class CartController extends BaseController { ... }
+// → Tự động có getCurrentUser(), authorizeOrderOwner(), successResponse(), errorResponse()
+// → Chỉ cần viết code cho 5 abstract methods (CRUD riêng cho Cart)
+// ============================================================================
 
 namespace App\Http\Controllers;
 
-use App\Http\Responses\ApiResponse;
-use App\Models\Order;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Http\Request;
+use App\Http\Responses\ApiResponse;    // ← Import class ApiResponse (TV2) để gọi static methods
+use App\Models\Order;                   // ← Import Order Model (TV1) để kiểm tra quyền sở hữu
+use Illuminate\Auth\AuthenticationException;  // ← Exception khi chưa đăng nhập
+use Illuminate\Http\Request;            // ← Class Request của Laravel — chứa dữ liệu HTTP request
 
 /**
  * Abstract Class BaseController
  *
- * Base controller cung cấp abstract CRUD methods và helper methods dùng chung.
- * Mọi API controller trong dự án phải extends class này.
+ * 📌 TỔNG QUAN:
+ *   - 6 abstract methods (CRUD + getModel) → class con BẮT BUỘC implement
+ *   - 4 concrete helper methods            → class con KẾ THỪA dùng ngay
  *
- * Design Pattern: Abstract Class + Template Method
- * - Abstract class KHÔNG thể khởi tạo trực tiếp (new BaseController() → ERROR)
- * - Định nghĩa 5 abstract methods (CRUD) → class con BẮT BUỘC phải implement
- * - Cung cấp 4 concrete helper methods → class con được kế thừa và sử dụng ngay
- *
- * So sánh với Interface:
- * - Interface chỉ có method signatures (hợp đồng), không có code thực thi
- * - Abstract Class có cả abstract methods (bắt buộc implement) lẫn concrete methods (code dùng chung)
- * - Một class chỉ extends được 1 Abstract Class nhưng implements được nhiều Interface
- *
- * Mở rộng trong tương lai:
- * - Nếu thêm CartController, ReviewController → chỉ cần extends BaseController
- * - Tự động có getCurrentUser(), authorizeOrderOwner(), successResponse(), errorResponse()
- * - Chỉ cần implement 5 abstract methods cho logic nghiệp vụ riêng
- *
- * Controllers sử dụng BaseController:
- * - OrderController (TV4): extends BaseController, implement 5 abstract methods
- *   + thêm myOrders(), confirmOrder(), cancelOrder()
- *
- * @package App\Http\Controllers
+ * 📌 AI SỬ DỤNG CLASS NÀY?
+ *   - OrderController (TV4): extends BaseController
  */
+
+// "abstract" = không thể new BaseController(), chỉ có thể extends
+// "extends Controller" = kế thừa từ Laravel Controller cơ bản (có sẵn)
 abstract class BaseController extends Controller
 {
+    // =====================================================================
+    // PHẦN 1: ABSTRACT METHODS — Class con BẮT BUỘC phải viết code
+    // =====================================================================
+    // Keyword "abstract" = chỉ khai báo, KHÔNG có thân hàm { }
+    // Nếu OrderController quên viết 1 trong 5 method này → PHP báo lỗi FATAL ERROR
+
     /**
-     * Lấy danh sách tài nguyên.
+     * 📦 Lấy danh sách tài nguyên (VD: danh sách đơn hàng).
      *
-     * Class con implement method này để trả về danh sách resource
-     * (ví dụ: danh sách đơn hàng, có phân trang và filter).
+     * Trong OrderController, method này sẽ:
+     * - Query database lấy danh sách orders
+     * - Hỗ trợ filter theo status (?status=pending)
+     * - Phân trang (paginate)
      *
-     * @param  \Illuminate\Http\Request  $request  Request chứa query parameters (page, status, search...)
-     * @return mixed  Response chứa danh sách resource
+     * @param  Request  $request  Chứa query params: ?status=pending&page=2
      */
     abstract public function index(Request $request);
 
     /**
-     * Hiển thị chi tiết một tài nguyên.
+     * 🔍 Xem chi tiết 1 tài nguyên (VD: chi tiết đơn hàng #5).
      *
-     * Class con implement method này để trả về thông tin chi tiết
-     * của một resource theo ID.
+     * Trong OrderController, method này sẽ:
+     * - Tìm order theo $id
+     * - Kiểm tra quyền sở hữu (đơn này có phải của mình không?)
+     * - Trả về JSON chi tiết đơn hàng
      *
-     * @param  string  $id  ID của resource cần xem
-     * @return mixed  Response chứa chi tiết resource
+     * @param  string  $id  ID của resource — VD: "5" (lấy từ URL /api/orders/5)
      */
     abstract public function show(string $id);
 
     /**
-     * Tạo mới một tài nguyên.
+     * ➕ Tạo mới tài nguyên (VD: tạo đơn hàng mới).
      *
-     * Class con implement method này để xử lý logic tạo mới resource
-     * (ví dụ: tạo đơn hàng mới với status 'pending').
+     * Trong OrderController, method này sẽ:
+     * - Validate dữ liệu (qua StoreOrderRequest)
+     * - Tạo order mới với status = 'pending'
+     * - Gán user_id = người đang đăng nhập
+     * - Trả về 201 Created
      *
-     * @param  \Illuminate\Http\Request  $request  Request chứa dữ liệu tạo mới
-     * @return mixed  Response chứa resource vừa tạo
+     * @param  Request  $request  Chứa body: { "total_amount": 50000, "address": "..." }
      */
     abstract public function store(Request $request);
 
     /**
-     * Cập nhật một tài nguyên.
+     * ✏️ Cập nhật tài nguyên (VD: sửa địa chỉ đơn hàng).
      *
-     * Class con implement method này để xử lý logic cập nhật resource
-     * (ví dụ: sửa địa chỉ giao hàng, ghi chú đơn hàng).
+     * Trong OrderController, method này sẽ:
+     * - Kiểm tra status === 'pending' (chỉ cho sửa khi đang chờ xử lý)
+     * - Validate dữ liệu (qua UpdateOrderRequest)
+     * - Cập nhật và trả về kết quả
      *
-     * @param  \Illuminate\Http\Request  $request  Request chứa dữ liệu cập nhật
-     * @param  string  $id  ID của resource cần cập nhật
-     * @return mixed  Response chứa resource đã cập nhật
+     * @param  Request  $request  Dữ liệu cần cập nhật
+     * @param  string  $id       ID đơn hàng cần sửa
      */
     abstract public function update(Request $request, string $id);
 
     /**
-     * Xóa một tài nguyên.
+     * 🗑️ Xóa tài nguyên (VD: xóa đơn hàng).
      *
-     * Class con implement method này để xử lý logic xóa resource
-     * (ví dụ: xóa đơn hàng ở trạng thái pending).
+     * Trong OrderController, method này sẽ:
+     * - Kiểm tra status === 'pending' (chỉ cho xóa khi đang chờ xử lý)
+     * - Xóa khỏi database
+     * - Trả về thông báo "Xóa thành công"
      *
-     * @param  string  $id  ID của resource cần xóa
-     * @return mixed  Response xác nhận đã xóa
+     * @param  string  $id  ID đơn hàng cần xóa
      */
     abstract public function destroy(string $id);
 
+    /**
+     * 🏷️ Trả về tên Model class mà controller quản lý.
+     *
+     * Trong OrderController: return Order::class;
+     * Mục đích: Để BaseController biết đang làm việc với Model nào
+     */
+    abstract protected function getModel(): string;
+
     // =====================================================================
-    // CONCRETE HELPER METHODS — Dùng chung cho mọi Controller con
+    // PHẦN 2: CONCRETE HELPER METHODS — Có code, class con dùng ngay
     // =====================================================================
+    // Các method dưới đây đã có code hoàn chỉnh.
+    // OrderController chỉ cần gọi: $this->getCurrentUser()
+    // KHÔNG cần viết lại code (đó là sức mạnh của kế thừa!)
 
     /**
-     * Lấy thông tin user đang đăng nhập (đã xác thực JWT).
+     * 👤 Lấy thông tin user đang đăng nhập.
      *
-     * Method này kiểm tra và trả về user hiện tại từ auth guard.
-     * Nếu không có user (chưa đăng nhập, token hết hạn) → throw AuthenticationException.
+     * 📖 CÁCH HOẠT ĐỘNG:
+     *   1. auth()->user() → Laravel tự động lấy user từ JWT token
+     *   2. Nếu không có user (token sai/hết hạn) → ném lỗi AuthenticationException
+     *   3. Nếu có user → trả về User Model
      *
-     * @return \App\Models\User  User đang đăng nhập
+     * 📌 CÁCH SỬ DỤNG TRONG ORDERCONTROLLER:
+     *   $user = $this->getCurrentUser();  // ← Gọi bằng $this vì đã kế thừa
+     *   $order->user_id = $user->id;      // ← Gán đơn hàng cho user hiện tại
      *
-     * @throws \Illuminate\Auth\AuthenticationException  Khi không có user đăng nhập
-     *
-     * @example
-     * $user = $this->getCurrentUser();
-     * $order->user_id = $user->id;
+     * "protected" = chỉ class này và class con mới gọi được
+     *               (bên ngoài KHÔNG gọi được)
      */
     protected function getCurrentUser()
     {
+        // auth()->user() → Laravel helper, trả về User Model hoặc null
         $user = auth()->user();
 
+        // Nếu $user là null → chưa đăng nhập hoặc token hết hạn
         if (!$user) {
+            // throw = "ném" exception → Laravel sẽ tự bắt và trả về lỗi 401
             throw new AuthenticationException('Chưa xác thực. Vui lòng đăng nhập.');
         }
 
-        return $user;
+        return $user;  // ← Trả về User Model (có ->id, ->name, ->email...)
     }
 
     /**
-     * Kiểm tra quyền sở hữu đơn hàng (backup cho middleware).
+     * 🔐 Kiểm tra quyền sở hữu đơn hàng.
      *
-     * So sánh user_id của đơn hàng với user đang đăng nhập.
-     * Nếu không phải chủ sở hữu → trả về response 403 Forbidden.
+     * 📖 CÁCH HOẠT ĐỘNG:
+     *   So sánh: $order->user_id (chủ đơn hàng) với auth()->id() (người đang đăng nhập)
+     *   - Nếu KHÁC nhau → trả 403 Forbidden ("Không phải đơn của bạn!")
+     *   - Nếu GIỐNG nhau → trả null ("OK, đây là đơn của bạn")
      *
-     * @param  \App\Models\Order  $order  Đơn hàng cần kiểm tra quyền
-     * @return \Illuminate\Http\JsonResponse|null  Response 403 nếu không có quyền, null nếu hợp lệ
+     * 📌 CÁCH SỬ DỤNG TRONG ORDERCONTROLLER:
+     *   $unauthorized = $this->authorizeOrderOwner($order);
+     *   if ($unauthorized) return $unauthorized;  // ← Nếu có lỗi → trả về 403 ngay
+     *   // Code tiếp tục ở đây... (chỉ chạy khi user là chủ đơn)
      *
-     * @example
-     * $unauthorized = $this->authorizeOrderOwner($order);
-     * if ($unauthorized) return $unauthorized;
+     * ⚠️ ĐÂY LÀ LỚP BẢO VỆ THỨ 2 (defense in depth):
+     *   - Lớp 1: OrderOwnerMiddleware (TV5) — kiểm tra ở tầng middleware
+     *   - Lớp 2: Method này — kiểm tra lại ở tầng controller (backup)
      */
     protected function authorizeOrderOwner(Order $order)
     {
+        // !== là so sánh nghiêm ngặt (strict): cả giá trị VÀ kiểu dữ liệu
+        // VD: 1 !== "1" → true (khác kiểu: int vs string)
         if ($order->user_id !== auth()->id()) {
             return ApiResponse::forbidden('Bạn không có quyền truy cập đơn hàng này');
         }
 
-        return null;
+        return null;  // ← null = "Không có lỗi, user có quyền"
     }
 
     /**
-     * Shortcut tạo response thành công.
+     * ✅ Shortcut tạo response thành công.
      *
-     * Delegate sang ApiResponse::success() để đảm bảo format JSON nhất quán.
+     * 📌 THAY VÌ VIẾT DÀI:
+     *   return ApiResponse::success($data, 'Thành công', 200);
      *
-     * @param  mixed   $data     Dữ liệu trả về
-     * @param  string  $message  Thông báo thành công
-     * @param  int     $code     HTTP status code
-     * @return \Illuminate\Http\JsonResponse
+     * 📌 CHỈ CẦN VIẾT NGẮN:
+     *   return $this->successResponse($data);
+     *
+     * "Delegate" = method này KHÔNG tự xử lý, mà chuyển tiếp cho ApiResponse::success()
      */
     protected function successResponse($data = null, string $message = 'Thành công', int $code = 200)
     {
@@ -159,23 +222,14 @@ abstract class BaseController extends Controller
     }
 
     /**
-     * Shortcut tạo response lỗi.
+     * ❌ Shortcut tạo response lỗi.
      *
-     * Delegate sang ApiResponse::error() để đảm bảo format JSON nhất quán.
-     *
-     * @param  string  $message  Thông báo lỗi
-     * @param  int     $code     HTTP status code
-     * @return \Illuminate\Http\JsonResponse
+     * 📌 CÁCH DÙNG:
+     *   return $this->errorResponse('Không thể hủy đơn đang giao', 400);
+     *   return $this->errorResponse('Đơn hàng không tồn tại', 404);
      */
     protected function errorResponse(string $message = 'Có lỗi xảy ra', int $code = 400)
     {
         return ApiResponse::error($message, $code);
     }
-
-    /**
-     * Trả về tên Model class mà controller con quản lý.
-     *
-     * @return string  Tên class Model (VD: Order::class)
-     */
-    abstract protected function getModel(): string;
 }

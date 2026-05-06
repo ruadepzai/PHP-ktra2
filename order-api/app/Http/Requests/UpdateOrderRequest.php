@@ -1,4 +1,33 @@
 <?php
+// ============================================================================
+// FILE: app/Http/Requests/UpdateOrderRequest.php
+// TV2 — Form Request Validation (cập nhật đơn hàng)
+// ============================================================================
+//
+// 📖 FILE NÀY KHÁC GÌ SO VỚI StoreOrderRequest?
+// ────────────────────────────────────────────────
+// StoreOrderRequest (TẠO MỚI):
+//   - total_amount: BẮT BUỘC (required) — phải nhập khi tạo
+//   - address:      BẮT BUỘC (required)
+//   - notes:        Tùy chọn (nullable)
+//
+// UpdateOrderRequest (CẬP NHẬT):
+//   - total_amount: ❌ KHÔNG CHO SỬA (không có trong rules)
+//   - address:      sometimes (chỉ validate NẾU client gửi lên)
+//   - notes:        Tùy chọn (nullable)
+//
+// 📖 "SOMETIMES" RULE LÀ GÌ?
+// ─────────────────────────────
+//   'address' => 'sometimes|required|string|min:10|max:500'
+//
+//   - "sometimes" = CHỈ validate khi field có trong request body
+//   - Nếu client gửi: { "notes": "ghi chú mới" } (không có address)
+//     → address KHÔNG bị validate → chỉ cập nhật notes
+//   - Nếu client gửi: { "address": "abc" }
+//     → address BỊ validate → "abc" chỉ 3 ký tự < 10 → lỗi!
+//
+//   Đây gọi là PARTIAL UPDATE (cập nhật 1 phần), phù hợp với HTTP PATCH
+// ============================================================================
 
 namespace App\Http\Requests;
 
@@ -8,29 +37,22 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
- * Class UpdateOrderRequest
+ * Class UpdateOrderRequest — Validate dữ liệu CẬP NHẬT đơn hàng
  *
- * Form Request Validation cho việc cập nhật đơn hàng.
- * Chỉ cho phép sửa 2 field: address và notes.
+ * 📌 FIELDS CHO PHÉP SỬA:
+ *   - address : Địa chỉ giao hàng (sometimes — không bắt buộc gửi)
+ *   - notes   : Ghi chú (nullable — có thể set null để xóa ghi chú)
  *
- * KHÔNG cho phép sửa:
- * - total_amount: Tổng tiền không thể thay đổi sau khi tạo
- * - status: Trạng thái chỉ thay đổi qua API riêng (confirm, cancel)
- * - user_id: Chủ sở hữu đơn hàng không thể thay đổi
- * - order_number: Mã đơn hàng không thể thay đổi
- *
- * Sử dụng 'sometimes' validation rule:
- * - Chỉ validate field khi nó có mặt trong request body
- * - Cho phép partial update (PATCH behavior)
- *
- * @package App\Http\Requests
+ * 📌 FIELDS KHÔNG CHO PHÉP SỬA:
+ *   - total_amount  : Tổng tiền không thể thay đổi sau khi tạo
+ *   - order_number  : Mã đơn không thể thay đổi
+ *   - status        : Trạng thái chỉ thay đổi qua confirm/cancel API
+ *   - user_id       : Chủ sở hữu không thể thay đổi
  */
 class UpdateOrderRequest extends FormRequest
 {
     /**
-     * Xác định user có được phép thực hiện request này không.
-     *
-     * @return bool  Luôn trả về true
+     * Luôn cho phép — JWT middleware đã xác thực rồi.
      */
     public function authorize(): bool
     {
@@ -38,9 +60,16 @@ class UpdateOrderRequest extends FormRequest
     }
 
     /**
-     * Quy tắc validation cho việc cập nhật đơn hàng.
+     * Quy tắc validation cho cập nhật.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * 📖 SO SÁNH VỚI StoreOrderRequest:
+     *   Store:  'address' => 'required|string|min:10|max:500'         ← BẮT BUỘC
+     *   Update: 'address' => 'sometimes|required|string|min:10|max:500' ← CHỈ khi có trong body
+     *
+     * 📖 CHÚ Ý: "sometimes|required" không mâu thuẫn:
+     *   - "sometimes" = "chỉ kiểm tra khi field tồn tại"
+     *   - "required"  = "nếu tồn tại thì KHÔNG ĐƯỢC TRỐNG"
+     *   Kết hợp: "Nếu gửi address thì phải có giá trị, không được gửi rỗng"
      */
     public function rules(): array
     {
@@ -51,9 +80,7 @@ class UpdateOrderRequest extends FormRequest
     }
 
     /**
-     * Thông báo lỗi validation bằng tiếng Việt.
-     *
-     * @return array<string, string>
+     * Thông báo lỗi bằng tiếng Việt.
      */
     public function messages(): array
     {
@@ -68,12 +95,9 @@ class UpdateOrderRequest extends FormRequest
     }
 
     /**
-     * Xử lý khi validation thất bại — trả về JSON thay vì redirect.
+     * Override: Trả JSON 422 thay vì redirect (giống StoreOrderRequest).
      *
-     * @param  \Illuminate\Contracts\Validation\Validator  $validator
-     * @return void
-     *
-     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     * 📖 Xem giải thích chi tiết ở StoreOrderRequest.php
      */
     protected function failedValidation(Validator $validator): void
     {

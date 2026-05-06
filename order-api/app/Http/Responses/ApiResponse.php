@@ -1,76 +1,101 @@
 <?php
+// ============================================================================
+// FILE: app/Http/Responses/ApiResponse.php
+// TV2 — Static Factory Pattern
+// ============================================================================
+//
+// 📖 STATIC FACTORY PATTERN LÀ GÌ?
+// -----------------------------------
+// Thay vì mỗi controller tự viết code tạo JSON response (dễ sai format),
+// ta tạo 1 class chuyên biệt chứa các static methods để tạo response.
+//
+//   ❌ KHÔNG NÊN (mỗi controller tự viết):
+//       return response()->json(['success' => true, 'data' => $data], 200);
+//       // Nếu 10 controller viết 10 kiểu → không nhất quán
+//
+//   ✅ NÊN DÙNG (gọi ApiResponse):
+//       return ApiResponse::success($data, 'Thành công');
+//       // 10 controller gọi cùng 1 chỗ → format luôn nhất quán
+//       // Muốn đổi format → sửa 1 file = áp dụng toàn bộ
+//
+// 📖 STATIC METHOD LÀ GÌ?
+// -------------------------
+// - Method thường: cần tạo object trước → $obj = new ApiResponse(); $obj->success();
+// - Static method: gọi TRỰC TIẾP qua tên class → ApiResponse::success();
+//   (Không cần "new", không cần tạo object)
+//
+// 🎯 FORMAT JSON CHUẨN CỦA DỰ ÁN:
+// {
+//     "success": true/false,     ← Thành công hay thất bại
+//     "message": "Mô tả...",     ← Mô tả kết quả bằng text
+//     "data": { ... } hoặc null, ← Dữ liệu trả về (null khi lỗi)
+//     "code": 200                ← HTTP status code (200, 201, 400, 401...)
+// }
+// ============================================================================
 
 namespace App\Http\Responses;
 
 use Illuminate\Http\JsonResponse;
 
 /**
- * Class ApiResponse
+ * Class ApiResponse — Static Factory Pattern
  *
- * Lớp tiện ích cung cấp các static factory methods để tạo JSON response
- * với format chuẩn, nhất quán cho toàn bộ API.
- *
- * Design Pattern: Static Factory Method
- * - Tất cả method đều là static — gọi trực tiếp ApiResponse::success($data)
- * - Tuân thủ DRY principle: mọi controller gọi chung 1 nơi, không tự viết response
- * - Nếu cần thay đổi format JSON → sửa 1 file = áp dụng toàn bộ hệ thống
- *
- * Format JSON chuẩn:
- * {
- *     "success": true|false,   // boolean - kết quả thành công hay thất bại
- *     "message": "...",        // string - mô tả kết quả
- *     "data": { ... },         // mixed - dữ liệu trả về (null khi lỗi)
- *     "code": 200              // integer - HTTP status code
- * }
- *
- * Khi có validation errors, thêm key "errors":
- * {
- *     "success": false,
- *     "message": "Dữ liệu không hợp lệ",
- *     "data": null,
- *     "errors": { "field": ["lỗi 1", "lỗi 2"] },
- *     "code": 422
- * }
- *
- * @package App\Http\Responses
+ * 📌 DANH SÁCH 8 STATIC METHODS:
+ *   1. success()      → 200 OK (lấy dữ liệu thành công)
+ *   2. created()      → 201 Created (tạo mới thành công)
+ *   3. error()        → 400 Bad Request (lỗi chung)
+ *   4. notFound()     → 404 Not Found (không tìm thấy)
+ *   5. unauthorized() → 401 Unauthorized (chưa đăng nhập)
+ *   6. forbidden()    → 403 Forbidden (không có quyền)
+ *   7. serverError()  → 500 Internal Server Error (lỗi server)
+ *   8. validation()   → 422 Unprocessable Entity (lỗi validation)
  */
 class ApiResponse
 {
+    // =========================================================================
+    // 1. SUCCESS — Thành công (HTTP 200)
+    // =========================================================================
     /**
      * Response thành công mặc định.
      *
-     * Sử dụng khi: Lấy danh sách đơn hàng, xem chi tiết đơn hàng,
-     * cập nhật đơn hàng thành công, đăng nhập thành công, refresh token...
+     * 📌 SỬ DỤNG KHI:
+     *   - Lấy danh sách đơn hàng: ApiResponse::success($orders, 'Lấy danh sách thành công')
+     *   - Xem chi tiết đơn hàng:  ApiResponse::success($order, 'Chi tiết đơn hàng')
+     *   - Đăng nhập thành công:   ApiResponse::success(['token' => $token], 'Đăng nhập thành công')
      *
-     * @param  mixed   $data     Dữ liệu trả về (object, array, collection, null)
-     * @param  string  $message  Thông báo mô tả kết quả
-     * @param  int     $code     HTTP status code (mặc định 200)
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::success($orders, 'Lấy danh sách đơn hàng thành công')
-     * @example ApiResponse::success(['token' => $token], 'Đăng nhập thành công')
+     * 📖 GIẢI THÍCH THAM SỐ:
+     * @param  mixed   $data     Dữ liệu trả về — có thể là object, array, collection, hoặc null
+     * @param  string  $message  Thông báo mô tả — mặc định "Thành công"
+     * @param  int     $code     HTTP status code — mặc định 200
+     * @return \Illuminate\Http\JsonResponse  Response JSON format chuẩn
      */
     public static function success($data = null, string $message = 'Thành công', int $code = 200): JsonResponse
     {
+        // response()->json() là helper của Laravel, tự động:
+        // - Set header Content-Type: application/json
+        // - Chuyển array PHP thành chuỗi JSON
+        // - Gán HTTP status code (200, 201, ...)
         return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data'    => $data,
-            'code'    => $code,
-        ], $code);
+            'success' => true,        // ← Luôn là true khi thành công
+            'message' => $message,    // ← VD: "Lấy danh sách đơn hàng thành công"
+            'data'    => $data,       // ← Dữ liệu thực tế (đơn hàng, user, token...)
+            'code'    => $code,       // ← HTTP status code (trùng với status bên ngoài)
+        ], $code);  // ← Tham số thứ 2 = HTTP status code thực tế
     }
 
+    // =========================================================================
+    // 2. CREATED — Tạo mới thành công (HTTP 201)
+    // =========================================================================
     /**
-     * Response tạo mới thành công (HTTP 201 Created).
+     * Response tạo mới thành công.
      *
-     * Sử dụng khi: Tạo đơn hàng mới thành công, đăng ký tài khoản thành công.
+     * 📌 SỬ DỤNG KHI:
+     *   - Tạo đơn hàng:    ApiResponse::created(new OrderResource($order), 'Tạo đơn hàng thành công')
+     *   - Đăng ký tài khoản: ApiResponse::created($user, 'Đăng ký thành công')
      *
-     * @param  mixed   $data     Dữ liệu resource vừa tạo
-     * @param  string  $message  Thông báo mô tả kết quả
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::created(new OrderResource($order), 'Tạo đơn hàng thành công')
-     * @example ApiResponse::created($user, 'Đăng ký tài khoản thành công')
+     * 📖 TẠI SAO 201 CHỨ KHÔNG PHẢI 200?
+     *   HTTP 200 = "OK, tôi đã xử lý xong"
+     *   HTTP 201 = "OK, tôi đã TẠO MỚI một resource" → cụ thể hơn, đúng chuẩn RESTful
      */
     public static function created($data = null, string $message = 'Tạo thành công'): JsonResponse
     {
@@ -79,35 +104,36 @@ class ApiResponse
             'message' => $message,
             'data'    => $data,
             'code'    => 201,
-        ], 201);
+        ], 201);  // ← 201 Created
     }
 
+    // =========================================================================
+    // 3. ERROR — Lỗi chung (HTTP 400 hoặc custom)
+    // =========================================================================
     /**
-     * Response lỗi chung (HTTP 400 Bad Request hoặc custom code).
+     * Response lỗi chung.
      *
-     * Sử dụng khi: Hủy đơn hàng đã giao, sửa đơn đã xác nhận,
-     * chuyển trạng thái không hợp lệ, validation lỗi (422)...
+     * 📌 SỬ DỤNG KHI:
+     *   - Hủy đơn đã giao:   ApiResponse::error('Không thể hủy đơn đang giao', 400)
+     *   - Sửa đơn đã xác nhận: ApiResponse::error('Chỉ sửa được khi pending', 422)
+     *   - Validation lỗi:     ApiResponse::error('Dữ liệu sai', 422, $validator->errors())
      *
-     * Khi $errors không null (validation errors), key "errors" sẽ được
-     * thêm vào JSON response để client hiển thị lỗi từng field.
-     *
-     * @param  string  $message  Thông báo lỗi
-     * @param  int     $code     HTTP status code (mặc định 400)
-     * @param  mixed   $errors   Chi tiết lỗi validation (MessageBag hoặc array)
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::error('Không thể hủy đơn hàng đang giao', 400)
-     * @example ApiResponse::error('Dữ liệu không hợp lệ', 422, $validator->errors())
+     * 📖 THAM SỐ $errors:
+     *   - Khi validation thất bại, $errors chứa danh sách lỗi từng field:
+     *     { "email": ["Email không đúng"], "name": ["Tên là bắt buộc"] }
+     *   - Khi lỗi thường (không phải validation), $errors = null → không có key "errors"
      */
     public static function error(string $message = 'Có lỗi xảy ra', int $code = 400, $errors = null): JsonResponse
     {
         $response = [
-            'success' => false,
+            'success' => false,       // ← Luôn là false khi lỗi
             'message' => $message,
-            'data'    => null,
+            'data'    => null,        // ← Khi lỗi thì không có data
             'code'    => $code,
         ];
 
+        // Chỉ thêm key "errors" khi có lỗi validation
+        // → Tránh trả về "errors": null (thừa thông tin)
         if ($errors !== null) {
             $response['errors'] = $errors;
         }
@@ -115,17 +141,18 @@ class ApiResponse
         return response()->json($response, $code);
     }
 
+    // =========================================================================
+    // 4. NOT FOUND — Không tìm thấy (HTTP 404)
+    // =========================================================================
     /**
-     * Response không tìm thấy tài nguyên (HTTP 404 Not Found).
+     * Response không tìm thấy tài nguyên.
      *
-     * Sử dụng khi: Đơn hàng không tồn tại, user không tồn tại,
-     * truy cập resource với ID không hợp lệ.
+     * 📌 SỬ DỤNG KHI:
+     *   - Đơn hàng không tồn tại:  ApiResponse::notFound('Đơn hàng không tồn tại')
+     *   - User không tìm thấy:     ApiResponse::notFound('Người dùng không tồn tại')
      *
-     * @param  string  $message  Thông báo lỗi
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::notFound('Không tìm thấy đơn hàng')
-     * @example ApiResponse::notFound('Đơn hàng #123 không tồn tại')
+     * 📖 KHI NÀO XẢY RA 404?
+     *   VD: Client gọi GET /api/orders/9999 nhưng đơn hàng #9999 không có trong DB
      */
     public static function notFound(string $message = 'Không tìm thấy tài nguyên'): JsonResponse
     {
@@ -137,17 +164,20 @@ class ApiResponse
         ], 404);
     }
 
+    // =========================================================================
+    // 5. UNAUTHORIZED — Chưa xác thực (HTTP 401)
+    // =========================================================================
     /**
-     * Response chưa xác thực (HTTP 401 Unauthorized).
+     * Response chưa xác thực — "Bạn là AI?"
      *
-     * Sử dụng khi: Token JWT sai, hết hạn, không có token,
-     * token bị blacklist sau khi logout.
+     * 📌 SỬ DỤNG KHI (bởi JwtAuthMiddleware — TV5):
+     *   - Không gửi token:        ApiResponse::unauthorized('Token không được cung cấp')
+     *   - Token hết hạn:          ApiResponse::unauthorized('Token đã hết hạn')
+     *   - Token bị sửa đổi:      ApiResponse::unauthorized('Token không hợp lệ')
      *
-     * @param  string  $message  Thông báo lỗi
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::unauthorized('Token không hợp lệ')
-     * @example ApiResponse::unauthorized('Token đã hết hạn, vui lòng đăng nhập lại')
+     * 📖 PHÂN BIỆT 401 vs 403:
+     *   401 = "Tôi không biết bạn là ai" (chưa đăng nhập)
+     *   403 = "Tôi biết bạn là ai, nhưng bạn không được phép" (đã đăng nhập nhưng không có quyền)
      */
     public static function unauthorized(string $message = 'Chưa xác thực'): JsonResponse
     {
@@ -159,17 +189,19 @@ class ApiResponse
         ], 401);
     }
 
+    // =========================================================================
+    // 6. FORBIDDEN — Không có quyền (HTTP 403)
+    // =========================================================================
     /**
-     * Response không có quyền truy cập (HTTP 403 Forbidden).
+     * Response không có quyền truy cập — "Bạn KHÔNG ĐƯỢC PHÉP!"
      *
-     * Sử dụng khi: User cố xem/sửa/xóa đơn hàng của người khác,
-     * truy cập tài nguyên không thuộc quyền sở hữu.
+     * 📌 SỬ DỤNG KHI (bởi OrderOwnerMiddleware — TV5):
+     *   - User A cố xem đơn hàng của User B:
+     *     ApiResponse::forbidden('Bạn không có quyền truy cập đơn hàng này')
      *
-     * @param  string  $message  Thông báo lỗi
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::forbidden('Bạn không có quyền truy cập đơn hàng này')
-     * @example ApiResponse::forbidden('Không có quyền thực hiện thao tác này')
+     * 📖 VÍ DỤ THỰC TẾ:
+     *   Bạn đã đăng nhập Shopee (401 OK), nhưng cố mở đơn hàng của người khác
+     *   → Shopee trả về 403: "Bạn không có quyền xem đơn này"
      */
     public static function forbidden(string $message = 'Không có quyền truy cập'): JsonResponse
     {
@@ -181,17 +213,18 @@ class ApiResponse
         ], 403);
     }
 
+    // =========================================================================
+    // 7. SERVER ERROR — Lỗi máy chủ (HTTP 500)
+    // =========================================================================
     /**
-     * Response lỗi máy chủ (HTTP 500 Internal Server Error).
+     * Response lỗi máy chủ — lỗi hệ thống không lường trước.
      *
-     * Sử dụng khi: Exception không xử lý được, lỗi database,
-     * lỗi service bên thứ ba, lỗi hệ thống không lường trước.
+     * 📌 SỬ DỤNG KHI:
+     *   - Database mất kết nối:  ApiResponse::serverError('Lỗi kết nối database')
+     *   - Bug trong code:        ApiResponse::serverError('Lỗi hệ thống')
      *
-     * @param  string  $message  Thông báo lỗi
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::serverError('Lỗi kết nối database')
-     * @example ApiResponse::serverError('Không thể xử lý yêu cầu, vui lòng thử lại sau')
+     * ⚠️ QUAN TRỌNG: Trong production, KHÔNG hiển thị chi tiết lỗi cho client
+     *   (vì hacker có thể lợi dụng thông tin lỗi để tấn công)
      */
     public static function serverError(string $message = 'Lỗi máy chủ'): JsonResponse
     {
@@ -203,16 +236,35 @@ class ApiResponse
         ], 500);
     }
 
+    // =========================================================================
+    // 8. VALIDATION — Lỗi validate dữ liệu (HTTP 422)
+    // =========================================================================
     /**
-     * Response lỗi validation (HTTP 422 Unprocessable Entity).
+     * Response lỗi validation — dữ liệu đầu vào không hợp lệ.
      *
-     * Sử dụng khi: Form validation thất bại, dữ liệu đầu vào không hợp lệ.
+     * 📌 SỬ DỤNG BỞI: AuthController (TV5) khi đăng ký/đăng nhập
      *
-     * @param  mixed   $errors   Chi tiết lỗi validation (MessageBag hoặc array)
-     * @param  string  $message  Thông báo lỗi
+     * 📌 VÍ DỤ:
+     *   $validator = Validator::make($request->all(), ['email' => 'required|email']);
+     *   if ($validator->fails()) {
+     *       return ApiResponse::validation($validator->errors());
+     *   }
+     *
+     * 📖 RESPONSE TRẢ VỀ:
+     *   {
+     *     "success": false,
+     *     "message": "Dữ liệu không hợp lệ",
+     *     "data": null,
+     *     "errors": {                    ← Danh sách lỗi theo từng field
+     *       "email": ["Email là bắt buộc"],
+     *       "password": ["Mật khẩu phải có ít nhất 6 ký tự"]
+     *     },
+     *     "code": 422
+     *   }
+     *
+     * @param  mixed   $errors   Chi tiết lỗi (MessageBag từ $validator->errors())
+     * @param  string  $message  Thông báo lỗi chung
      * @return \Illuminate\Http\JsonResponse
-     *
-     * @example ApiResponse::validation($validator->errors())
      */
     public static function validation($errors, string $message = 'Dữ liệu không hợp lệ'): JsonResponse
     {
@@ -220,8 +272,8 @@ class ApiResponse
             'success' => false,
             'message' => $message,
             'data'    => null,
-            'errors'  => $errors,
+            'errors'  => $errors,     // ← Luôn có key "errors" cho validation
             'code'    => 422,
-        ], 422);
+        ], 422);  // ← 422 Unprocessable Entity
     }
 }
