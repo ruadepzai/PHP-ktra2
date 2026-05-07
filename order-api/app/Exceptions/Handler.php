@@ -1,98 +1,52 @@
-﻿<?php
+<?php
 
 namespace App\Exceptions;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Throwable;
+use App\Http\Responses\ApiResponse;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
-use Symfony\Component\HttpKernel\Exception\HttpException;
-use Throwable;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 class Handler
 {
     /**
-     * Render exception thanh JSON response
+     * Thêm CORS headers vào response lỗi.
+     * Khi exception xảy ra, response có thể bypass CorsMiddleware,
+     * nên cần gắn CORS headers trực tiếp tại đây.
      */
-    public static function render(Throwable $e, $request): ?JsonResponse
+    private static function withCorsHeaders($response)
     {
-        // Chi xu ly API requests
-        if (!$request->expectsJson() && !$request->is('api/*')) {
-            return null;
+        if ($response) {
+            $response->headers->set('Access-Control-Allow-Origin', '*');
+            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
         }
-
-        return self::renderApiException($e);
+        return $response;
     }
 
-    /**
-     * Chuyen doi exception thanh JSON response 
-     */
-    private static function renderApiException(Throwable $e): JsonResponse
+    public static function renderApi(Throwable $e, $request)
     {
-        // --- 401 Unauthorized ---
-        // Khi chua dang nhap hoac token khong hop le
-        if ($e instanceof AuthenticationException) {
-            return self::jsonError('Chua xac thuc. Vui long dang nhap', 401);
+        if ($request->is('api/*') || $request->expectsJson()) {
+            if ($e instanceof ValidationException) {
+                return self::withCorsHeaders(ApiResponse::validation($e->errors(), 'Dữ liệu không hợp lệ'));
+            }
+            if ($e instanceof NotFoundHttpException) {
+                return self::withCorsHeaders(ApiResponse::notFound('Không tìm thấy tài nguyên yêu cầu'));
+            }
+            if ($e instanceof MethodNotAllowedHttpException) {
+                return self::withCorsHeaders(ApiResponse::error('Phương thức không được hỗ trợ', 405));
+            }
+            if ($e instanceof UnauthorizedHttpException) {
+                return self::withCorsHeaders(ApiResponse::unauthorized('Chưa xác thực hoặc token hết hạn'));
+            }
+            if ($e instanceof AccessDeniedHttpException) {
+                return self::withCorsHeaders(ApiResponse::forbidden('Bạn không có quyền thực hiện thao tác này'));
+            }
+            return self::withCorsHeaders(ApiResponse::serverError('Lỗi hệ thống: ' . $e->getMessage()));
         }
-
-        // --- 404 Not Found ---
-        // Khi goi findOrFail() ma khong tim thay record
-        if ($e instanceof ModelNotFoundException) {
-            // Lay ten Model (VD: "Order", "User")
-            $model = class_basename($e->getModel());
-            return self::jsonError("{$model} khong ton tai", 404);
-        }
-
-        // --- 404 Not Found ---
-        // Khi URL khong khop voi bat ky route nao
-        if ($e instanceof NotFoundHttpException) {
-            return self::jsonError('Khong tim thay duong dan nay', 404);
-        }
-
-        // --- 405 Method Not Allowed ---
-        // Khi goi sai HTTP method (VD: GET thay vi POST)
-        if ($e instanceof MethodNotAllowedHttpException) {
-            return self::jsonError('Phuong thuc HTTP khong duoc ho tro cho duong dan nay', 405);
-        }
-
-        // --- 422 Unprocessable Entity ---
-        // Khi validation that bai (FormRequest hoac Validator)
-        if ($e instanceof ValidationException) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Du lieu khong hop le',
-                'errors'  => $e->errors(),
-            ], 422);
-        }
-
-        // --- HTTP Exception chung (403, 429, etc.) ---
-        if ($e instanceof HttpException) {
-            return self::jsonError(
-                $e->getMessage() ?: 'Loi HTTP',
-                $e->getStatusCode()
-            );
-        }
-
-        // --- 500 Internal Server Error ---
-        // Moi loi khac (bug, DB mat ket noi, loi khong luong truoc)
-        $message = config('app.debug')
-            ? $e->getMessage()          // Development: hien chi tiet
-            : 'Loi he thong noi bo';    // Production: an chi tiet
-
-        return self::jsonError($message, 500);
-    }
-
-    /**
-     * Helper: Tao JSON error response voi format thong nhat
-     */
-    private static function jsonError(string $message, int $code): JsonResponse
-    {
-        return response()->json([
-            'success'    => false,
-            'message'    => $message,
-            'error_code' => $code,
-        ], $code);
+        return null;
     }
 }

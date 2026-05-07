@@ -13,10 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Them CorsMiddleware vao dau stack middleware toan cuc
+        $middleware->prepend(\App\Http\Middleware\CorsMiddleware::class);
+
         // Dang ky middleware aliases (TV3 + TV5)
-        // Sau khi dang ky, co the dung trong routes:
-        //   Route::middleware('jwt.auth')  -> JwtAuthMiddleware
-        //   Route::middleware('order.owner') -> OrderOwnerMiddleware
         $middleware->alias([
             'jwt.auth'    => \App\Http\Middleware\JwtAuthMiddleware::class,
             'order.owner' => \App\Http\Middleware\OrderOwnerMiddleware::class,
@@ -25,10 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Error Handler tap trung
-        // Moi exception deu duoc chuyen qua Handler::render()
+        // Moi exception deu duoc chuyen qua Handler::renderApi()
         // Neu la API request -> tra ve JSON format thong nhat
         // Neu la Web request -> de Laravel xu ly mac dinh (HTML)
         $exceptions->render(function (\Throwable $e, $request) {
-            return Handler::render($e, $request);
+            return Handler::renderApi($e, $request);
         });
     })->create();

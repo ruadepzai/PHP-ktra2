@@ -9,6 +9,21 @@ class Order extends Model
 {
     use HasFactory;
 
+    /**
+     * Boot method — tu dong tao order_number khi tao don hang moi.
+     * Format: ORD-YYYYMMDD-XXXXX (5 ky tu ngau nhien)
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($order) {
+            if (empty($order->order_number)) {
+                $order->order_number = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            }
+        });
+    }
+
     // Danh sách các trạng thái hợp lệ
     const STATUS_PENDING = 'pending';
     const STATUS_CONFIRMED = 'confirmed';

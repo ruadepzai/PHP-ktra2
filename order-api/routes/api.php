@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 // 1. Đã sửa lại đường dẫn import (thêm \Api\)
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\AdminController;
 
 // Nhóm 1: Auth Routes (Không cần Token)
 Route::prefix('auth')->group(function () {
@@ -16,6 +17,12 @@ Route::middleware('jwt.auth')->group(function () {
     // Tài khoản
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // Admin
+    Route::get('admin/stats', [AdminController::class, 'stats']);
+    Route::get('admin/users', [AdminController::class, 'users']);
+    Route::patch('admin/orders/{id}/ship', [AdminController::class, 'shipOrder']);
+    Route::patch('admin/orders/{id}/deliver', [AdminController::class, 'deliverOrder']);
 
     // 2. Đã bổ sung route refresh token theo yêu cầu
     Route::post('auth/refresh', [AuthController::class, 'refresh']);

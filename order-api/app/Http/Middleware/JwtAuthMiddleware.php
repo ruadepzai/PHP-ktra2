@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Middleware;
 
@@ -16,6 +16,19 @@ use App\Http\Responses\ApiResponse;
 class JwtAuthMiddleware implements MiddlewareInterface
 {
     /**
+     * Them CORS headers vao response loi.
+     * Khi middleware tra response truc tiep (khong qua controller),
+     * CorsMiddleware co the khong duoc goi → can gan CORS headers tai day.
+     */
+    private function withCors($response)
+    {
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+        return $response;
+    }
+
+    /**
      * Xu ly request den
      * @param  Request  $request  — Thong tin request (URL, header, body...)
      * @param  Closure  $next     — Callback chuyen request sang middleware/controller tiep theo
@@ -29,20 +42,20 @@ class JwtAuthMiddleware implements MiddlewareInterface
 
             //Token hop le nhung user khong ton tai trong DB
             if (!$user) {
-                return ApiResponse::error('Nguoi dung khong ton tai', 401);
+                return $this->withCors(ApiResponse::error('Nguoi dung khong ton tai', 401));
             }
 
         } catch (TokenExpiredException $e) {
             // Token da het han
-            return ApiResponse::error('Token da het han, vui long dang nhap lai', 401);
+            return $this->withCors(ApiResponse::error('Token da het han, vui long dang nhap lai', 401));
 
         } catch (TokenInvalidException $e) {
             // Token bi sai format hoac bi chinh sua
-            return ApiResponse::error('Token khong hop le', 401);
+            return $this->withCors(ApiResponse::error('Token khong hop le', 401));
 
         } catch (JWTException $e) {
             // Khong tim thay token trong header
-            return ApiResponse::error('Token khong duoc cung cap', 401);
+            return $this->withCors(ApiResponse::error('Token khong duoc cung cap', 401));
         }
 
         return $next($request);
