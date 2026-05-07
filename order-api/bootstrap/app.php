@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth'    => \App\Http\Middleware\JwtAuthMiddleware::class,
             'order.owner' => \App\Http\Middleware\OrderOwnerMiddleware::class,
             'cors'        => \App\Http\Middleware\CorsMiddleware::class,
+            'admin'       => \App\Http\Middleware\AdminMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

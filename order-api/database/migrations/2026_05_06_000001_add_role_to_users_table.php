@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Thêm cột role, mặc định là 'user'
-            $table->string('role')->default('user')->after('email');
+            $table->enum('role', ['admin', 'user'])->default('user')->after('email');
         });
     }
 

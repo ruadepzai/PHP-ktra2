@@ -54,4 +54,12 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Kiểm tra user có phải admin không
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 }

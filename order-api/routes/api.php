@@ -28,6 +28,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
     // Đơn hàng
+    // Don hang - User
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/my', [OrderController::class, 'myOrders']);
@@ -36,4 +37,17 @@ Route::middleware('jwt.auth')->group(function () {
     Route::patch('orders/{id}/confirm', [OrderController::class, 'confirmOrder']);
     Route::patch('orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
     Route::delete('orders/{id}', [OrderController::class, 'destroy']);
+
+    // Admin-only Routes
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        // Quan ly don hang - Admin chuyen trang thai
+        Route::patch('orders/{id}/ship', [OrderController::class, 'shipOrder']);
+        Route::patch('orders/{id}/deliver', [OrderController::class, 'deliverOrder']);
+
+        // Quan ly user
+        Route::get('users', [AuthController::class, 'listUsers']);
+
+        // Thong ke
+        Route::get('stats', [OrderController::class, 'stats']);
+    });
 });
